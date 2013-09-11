@@ -11,7 +11,7 @@ import (
 )
 
 import (
-	"github.com/lxn/walk"
+	"github.com/ledzep2/walk"
 )
 
 func main() {
