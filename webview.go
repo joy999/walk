@@ -6,6 +6,8 @@ package walk
 
 import (
 	"fmt"
+	netUrl "net/url"
+	"strconv"
 	"syscall"
 	"unsafe"
 )
@@ -185,6 +187,42 @@ func (wv *WebView) URL() (url string, err error) {
 	return
 }
 
+//func (wv *WebView) GetDocument() error {
+//	return wv.withWebBrowser2(func(webBrowser2 *win.IWebBrowser2) error {
+
+//	})
+//}
+
+func (wv *WebView) SetURLWithPost(url string, postData netUrl.Values) error {
+	return wv.withWebBrowser2(func(webBrowser2 *win.IWebBrowser2) error {
+		urlBstr := win.StringToVariantBSTR(url)
+		flags := win.IntToVariantI4(0)
+		targetFrameName := win.StringToVariantBSTR("_self")
+
+		postStr := ""
+
+		for k, v := range postData {
+			if len(v) == 1 {
+				postStr += k + "=" + netUrl.QueryEscape(v[0]) + "&"
+			} else {
+				for i, _v := range v {
+					postStr += k + "[" + strconv.Itoa(i) + "]=" + netUrl.QueryEscape(_v) + "&"
+				}
+			}
+		}
+
+		postStr = postStr[:len(postStr)-1]
+
+		postBstr := unsafe.Pointer(win.StringToVariantBSTR(postStr))
+
+		if hr := webBrowser2.Navigate2(urlBstr, flags, targetFrameName, postBstr, nil); win.FAILED(hr) {
+			return errorFromHRESULT("IWebBrowser2.Navigate2", hr)
+		}
+
+		return nil
+	})
+}
+
 func (wv *WebView) SetURL(url string) error {
 	return wv.withWebBrowser2(func(webBrowser2 *win.IWebBrowser2) error {
 		urlBstr := win.StringToVariantBSTR(url)
@@ -224,11 +262,14 @@ func (wv *WebView) withWebBrowser2(f func(webBrowser2 *win.IWebBrowser2) error) 
 	return f(webBrowser2)
 }
 
+func (wv *WebView) WithWebBrowser2(f func(webBrowser2 *win.IWebBrowser2) error) error {
+	return wv.withWebBrowser2(f)
+}
+
 func (wv *WebView) onResize() {
 	// FIXME: handle error?
 	wv.withWebBrowser2(func(webBrowser2 *win.IWebBrowser2) error {
 		bounds := wv.ClientBounds()
-
 		webBrowser2.Put_Left(0)
 		webBrowser2.Put_Top(0)
 		webBrowser2.Put_Width(int32(bounds.Width))
