@@ -26,6 +26,69 @@ type MainWindow struct {
 	statusBar       *StatusBar
 }
 
+func NewMainWindowWithStyle(style, styleEx uint32) (*MainWindow, error) {
+	mw := new(MainWindow)
+
+	if style == 0 {
+		style = win.WS_OVERLAPPEDWINDOW
+	}
+
+	if styleEx == 0 {
+		styleEx = win.WS_EX_CONTROLPARENT
+	}
+
+	if err := InitWindow(
+		mw,
+		nil,
+		mainWindowWindowClass,
+		style,
+		styleEx); err != nil {
+
+		return nil, err
+	}
+
+	succeeded := false
+	defer func() {
+		if !succeeded {
+			mw.Dispose()
+		}
+	}()
+
+	mw.SetPersistent(true)
+
+	var err error
+
+	if mw.menu, err = newMenuBar(); err != nil {
+		return nil, err
+	}
+	if !win.SetMenu(mw.hWnd, mw.menu.hMenu) {
+		return nil, lastError("SetMenu")
+	}
+
+	if mw.toolBar, err = NewToolBar(mw); err != nil {
+		return nil, err
+	}
+	mw.toolBar.parent = nil
+	mw.Children().Remove(mw.toolBar)
+	mw.toolBar.parent = mw
+	win.SetParent(mw.toolBar.hWnd, mw.hWnd)
+
+	if mw.statusBar, err = NewStatusBar(mw); err != nil {
+		return nil, err
+	}
+	mw.statusBar.parent = nil
+	mw.Children().Remove(mw.statusBar)
+	mw.statusBar.parent = mw
+	win.SetParent(mw.statusBar.hWnd, mw.hWnd)
+
+	// This forces display of focus rectangles, as soon as the user starts to type.
+	mw.SendMessage(win.WM_CHANGEUISTATE, win.UIS_INITIALIZE, 0)
+
+	succeeded = true
+
+	return mw, nil
+}
+
 func NewMainWindow() (*MainWindow, error) {
 	mw := new(MainWindow)
 
