@@ -248,6 +248,37 @@ func (wv *WebView) GetDocument(iDispatch unsafe.Pointer) error {
 	})
 }
 
+func (wv *WebView) GetBodyHTML() (bodyHTML string, err error) {
+	bodyHTML = ""
+	err = nil
+	wv.withWebBrowser2(func(webBrowser2 *win.IWebBrowser2) error {
+		var doc *win.IHTMLDocument2
+		if hr := webBrowser2.Get_Document(&doc); win.FAILED(hr) {
+			err = errorFromHRESULT("IWebBrowser2.GetDocument", hr)
+			return
+		}
+
+		var elt *IHTMLElement
+
+		if hr := doc.GetBody(&elt); win.FAILED(hr) {
+			err = errorFromHRESULT("IHTMLElement.GetBody", hr)
+			return
+		}
+
+		buf := make([]uint16, 1024*1024)
+
+		bufPtr := (*uint16)(buf)
+
+		if hr := elt.Get_innerHTML(&bufPtr); win.FAILED(hr) {
+			err = errorFromHRESULT("IHTMLElement.Get_innerHTML", hr)
+			return
+		}
+
+		bodyHTML = syscall.UTF16ToString(buf)
+
+	})
+}
+
 func (wv *WebView) URLChanged() *Event {
 	return wv.urlChangedPublisher.Event()
 }
