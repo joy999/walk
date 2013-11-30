@@ -237,6 +237,17 @@ func (wv *WebView) SetURL(url string) error {
 	})
 }
 
+func (wv *WebView) GetDocument(iDispatch unsafe.Pointer) error {
+	return wv.withWebBrowser2(func(webBrowser2 *win.IWebBrowser2) error {
+
+		if hr := webBrowser2.Get_Document(iDispatch); win.FAILED(hr) {
+			return errorFromHRESULT("IWebBrowser2.GetDocument", hr)
+		}
+
+		return nil
+	})
+}
+
 func (wv *WebView) URLChanged() *Event {
 	return wv.urlChangedPublisher.Event()
 }
@@ -262,9 +273,11 @@ func (wv *WebView) withWebBrowser2(f func(webBrowser2 *win.IWebBrowser2) error) 
 	return f(webBrowser2)
 }
 
+/*
 func (wv *WebView) WithWebBrowser2(f func(webBrowser2 *win.IWebBrowser2) error) error {
 	return wv.withWebBrowser2(f)
 }
+*/
 
 func (wv *WebView) onResize() {
 	// FIXME: handle error?
