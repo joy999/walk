@@ -255,27 +255,26 @@ func (wv *WebView) GetBodyHTML() (bodyHTML string, err error) {
 		var doc *win.IHTMLDocument2
 		if hr := webBrowser2.Get_Document(&doc); win.FAILED(hr) {
 			err = errorFromHRESULT("IWebBrowser2.GetDocument", hr)
-			return
+			return err
 		}
 
 		var elt *IHTMLElement
 
 		if hr := doc.GetBody(&elt); win.FAILED(hr) {
 			err = errorFromHRESULT("IHTMLElement.GetBody", hr)
-			return
+			return err
 		}
 
-		buf := make([]uint16, 1024*1024)
-
-		bufPtr := (*uint16)(buf)
+		var bufPtr *uint16
 
 		if hr := elt.Get_innerHTML(&bufPtr); win.FAILED(hr) {
 			err = errorFromHRESULT("IHTMLElement.Get_innerHTML", hr)
-			return
+			return err
 		}
 
-		bodyHTML = syscall.UTF16ToString(buf)
+		bodyHTML = syscall.UTF16ToString(bufPtr)
 
+		return nil
 	})
 }
 
