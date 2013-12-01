@@ -237,6 +237,60 @@ func (wv *WebView) SetURL(url string) error {
 	})
 }
 
+func (wv *WebView) GetDocument(iDispatch unsafe.Pointer) error {
+	return wv.withWebBrowser2(func(webBrowser2 *win.IWebBrowser2) error {
+
+		if hr := webBrowser2.Get_Document(iDispatch); win.FAILED(hr) {
+			return errorFromHRESULT("IWebBrowser2.GetDocument", hr)
+		}
+
+		return nil
+	})
+}
+
+func (wv *WebView) GetBodyHTML() (bodyHTML string, err error) {
+	bodyHTML = ""
+	err = nil
+	wv.withWebBrowser2(func(webBrowser2 *win.IWebBrowser2) error {
+		var doc win.IHTMLDocument2
+		if hr := webBrowser2.Get_Document(unsafe.Pointer(&(doc.LpVtbl))); win.FAILED(hr) || doc.LpVtbl == nil {
+			err = errorFromHRESULT("IWebBrowser2.GetDocument", hr)
+			return err
+		}
+
+		var elt win.IHTMLElement
+
+		if hr := doc.GetBody(&elt); win.FAILED(hr) || elt.LpVtbl == nil {
+			err = errorFromHRESULT("IHTMLElement.GetBody", hr)
+			return err
+		}
+
+		var cs *uint16
+
+		if hr := elt.Get_innerHTML(&cs); win.FAILED(hr) {
+			err = errorFromHRESULT("IHTMLElement.Get_innerHTML", hr)
+			return err
+		}
+
+		if cs != nil {
+
+			us := make([]uint16, 0, 256)
+			for p := uintptr(unsafe.Pointer(cs)); ; p += 2 {
+				u := *(*uint16)(unsafe.Pointer(p))
+				if u == 0 {
+					bodyHTML = syscall.UTF16ToString(us)
+					break
+				}
+				us = append(us, u)
+			}
+		}
+
+		return nil
+	})
+
+	return
+}
+
 func (wv *WebView) URLChanged() *Event {
 	return wv.urlChangedPublisher.Event()
 }
@@ -262,9 +316,11 @@ func (wv *WebView) withWebBrowser2(f func(webBrowser2 *win.IWebBrowser2) error) 
 	return f(webBrowser2)
 }
 
+/*
 func (wv *WebView) WithWebBrowser2(f func(webBrowser2 *win.IWebBrowser2) error) error {
 	return wv.withWebBrowser2(f)
 }
+*/
 
 func (wv *WebView) onResize() {
 	// FIXME: handle error?
