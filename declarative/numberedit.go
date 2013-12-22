@@ -5,7 +5,7 @@
 package declarative
 
 import (
-	"github.com/lxn/walk"
+	"github.com/ledzep2/walk"
 )
 
 type NumberEdit struct {
